@@ -1,0 +1,167 @@
+---
+title: "Analysis on Cyclistic Bike-Share 10 months data"
+author: "Uche"
+date: "10/17/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# **Loading packages**
+Note: The code below loads the tidyverse and 
+```{r}
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+```
+
+# ** Importing data
+Note: The code below imports data sets for months
+```{r,echo=FALSE}
+dec_2020 <- read_csv("12_2020.csv")
+jan_2021 <- read_csv("01_2021.csv")
+feb_2021 <- read_csv("02_2021.csv")
+mar_2021 <- read_csv("03_2021.csv")
+april_2021 <- read_csv("04_2021.csv")
+may_2021 <- read_csv("05_2021.csv")
+june_2021 <- read_csv("06_2021.csv")
+july_2021 <- read_csv("07_2021.csv")
+aug_2021 <- read_csv("08_2021.csv")
+sept_2021 <- read_csv("09_2021.csv")
+```
+
+Note: The code below combines the monthly data frames into a full_year data frame
+```{r,echo=FALSE}
+all_trips <- bind_rows(dec_2020,jan_2021,feb_2021,mar_2021,april_2021,may_2021,june_2021,july_2021,aug_2021,sept_2021)
+```
+
+Note: The code below creates a new data frame with specified columns
+```{r,echo=FALSE}
+all_trips<- all_trips %>%
+  select(ride_id, rideable_type, started_at,ended_at,member_casual)
+```
+
+Note: The code below cleans the data and adds new columns
+``` {r,echo=FALSE}
+all_trips$date<-as.Date(all_trips$started_at)
+all_trips$month<-format(as.Date(all_trips$date),"%m")
+all_trips$day<-format(as.Date(all_trips$date),"%d")
+all_trips$year<-format(as.Date(all_trips$date),"%Y")
+all_trips$day_of_week<-format(as.Date(all_trips$date),"%A")
+all_trips$ride_length<- difftime(all_trips$ended_at,all_trips$started_at)
+```
+
+Note: The code below converts ride_length from factor to numeric
+```{r,echo=FALSE}
+all_trips$ride_length<-as.numeric(as.character(all_trips$ride_length))
+```
+
+Note: The code below sieves data with negative ride_length
+``` {r,echo=FALSE}
+all_trips_v2 <- all_trips %>%
+  filter(ride_length > 0)
+```
+
+Note: The code below performs general summary descriptive analysis
+``` {r,echo=FALSE}
+summary(all_trips_v2)
+```
+
+Note: The code below performs descriptive analysis that shows average_ride_length for member_casual
+```{r,echo=FALSE}
+all_trips_v2 %>% group_by(member_casual)%>%summarize(mean_ride_length=mean(ride_length))
+```
+
+Note: The code below performs summary statistics for ride_length
+```{r,echo=FALSE}
+summary(all_trips_v2$ride_length)
+```
+
+Note: The code below performs descriptive analysis for each month for average_ride length and member_casual
+```{r,echo=FALSE}
+all_trips_v2%>%group_by(month,member_casual)%>%summarize(mean_ride_length=mean(ride_length))
+```
+
+Note: The code below arranges the order of the day_of_the_week
+```{r,echo=FALSE}
+all_trips_v2$day_of_week<-ordered(all_trips_v2$day_of_week, levels=c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+```
+
+Note: The code below makes different plots
+Note: make a plot of number of rides for each day of the week
+```{r,echo=FALSE}
+all_trips_v2%>%
+  mutate(day_of_week = wday(started_at, label = TRUE)) %>%
+  group_by(member_casual,day_of_week)%>%
+  summarize(number_ride=n(), mean_duration=mean(ride_length))%>%
+  ggplot(aes(x=day_of_week,y=number_ride,fill=member_casual))+geom_col(position="dodge")
+```
+
+Note: make a plot of number of rides and ride_length for each day of the week
+```{r,echo=FALSE}
+all_trips_v2 %>%
+  mutate(day_of_week = wday(started_at, label = TRUE)) %>%
+  group_by(member_casual, day_of_week) %>% 
+  summarise(number_of_rides = n(),average_duration = mean(ride_length)) %>%
+  arrange(member_casual, day_of_week)%>%
+  ggplot(aes(x=day_of_week,y=average_duration,fill=member_casual))+geom_col(position="dodge")
+```
+
+Note: make a plot of number of rides and average ride_length for each month
+```{r,echo=FALSE}
+all_trips_v2%>%
+  group_by(member_casual,month)%>%
+  summarize(average_ride_length=mean(ride_length))%>%
+  arrange(member_casual,month)%>%
+  ggplot(aes(x=month,y=average_ride_length,fill=member_casual))+geom_col(position="dodge")
+```
+
+Note: make a plot of number of rides for each month
+```{r,echo=FALSE}
+all_trips_v2%>%
+  group_by(member_casual,month)%>%
+  summarize(number_of_rides=n())%>%
+  arrange(member_casual,month)%>%
+  ggplot(aes(x=month,y=number_of_rides,fill=member_casual))+geom_col(position="dodge")
+```
+
+Note: The code below creates new data frames for export
+Note: Average ride length for casual and members for each day of the week
+```{r,echo=FALSE}
+ride_length_day_of_week<-all_trips_v2%>%
+  group_by(member_casual,day_of_week)%>%
+  summarize(average_ride_length=mean(ride_length))%>%
+  arrange(member_casual,day_of_week)
+```
+
+Note: Average ride length for casual and members for each month
+```{r,echo=FALSE}
+ride_length_month<-all_trips_v2%>%
+  group_by(member_casual,month)%>%
+  summarize(average_ride_length=mean(ride_length))%>%
+  arrange(member_casual,month)
+```
+
+Note: Average number of rides for casual and members for each day of the week
+```{r,echo=FALSE}
+number_of_ride_day_of_week<-all_trips_v2%>%
+  group_by(member_casual,day_of_week)%>%
+  summarize(number_of_ride=n())%>%
+  arrange(member_casual,day_of_week)
+```
+
+Note: Average ride length for casual and members for each month
+```{r,echo=FALSE}
+number_of_ride_month<-all_trips_v2%>%
+  group_by(member_casual,month)%>%
+  summarize(number_of_ride=n())%>%
+  arrange(member_casual,month)
+```
+
+Note: The code below exports csv files
+```{r,echo=FALSE}
+write.csv(ride_length_day_of_week,file='C:/Users/UCHE/Desktop/Google Analytics/Capstone Project/cyclistic_data_2021/CSV_files/ride_length_day_of_week.csv')
+write.csv(ride_length_month,file='C:/Users/UCHE/Desktop/Google Analytics/Capstone Project/cyclistic_data_2021/CSV_files/ride_length_month.csv')
+write.csv(number_of_ride_day_of_week,file='C:/Users/UCHE/Desktop/Google Analytics/Capstone Project/cyclistic_data_2021/CSV_files/number_of_ride_day_of_week.csv')
+write.csv(number_of_ride_month,file='C:/Users/UCHE/Desktop/Google Analytics/Capstone Project/cyclistic_data_2021/CSV_files/number_of_ride_month.csv')
+```
